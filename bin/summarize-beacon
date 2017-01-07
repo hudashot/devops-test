@@ -1,1 +1,73 @@
-# Placeholder for your script.
+#!/usr/bin/env python3
+
+import argparse
+import collections
+import dateparser
+import datetime
+import logging
+import sys
+
+import beacon
+
+
+def arg_datetime(arg):
+    """Parses a string command-line argument as a datetime object."""
+    dt = dateparser.parse(arg)
+    if dt is None:
+        raise argparse.ArgumentTypeError(
+          "Cannot parse '{}' as date/time".format(arg))
+    return dt
+
+
+def main():
+    parser = argparse.ArgumentParser(
+      description="Calculate character frequency of NIST Randomness Beacon "
+                  "values covering a specific time interval")
+    parser.add_argument(
+      "--from", dest="_from", type=arg_datetime,
+      help="get beacons starting from this date/time rounded down to a minute "
+           "(inclusive). Defaults to current time.")
+    parser.add_argument(
+      "--to", type=arg_datetime,
+      help="get all beacons ending at this date/time rounded down to a minute "
+           "(inclusive). Defaults to --from.")
+    parser.add_argument(
+      "--timeout", type=float, default=5.0,
+      help="timeout for HTTP calls (seconds)")
+    parser.add_argument(
+      "--concurrency", type=int, default=1,
+      help="how many threads to use to fetch beacon data via HTTP")
+    parser.add_argument(
+      "--debug", "-d", action="store_true", help="enable debug output")
+    args = parser.parse_args()
+
+    if args.debug:
+        logging.basicConfig(level=logging.DEBUG)
+
+    dt_from = args._from or datetime.datetime.now()
+    dt_to = args.to or dt_from
+    logging.debug("Parsed dates: {}, {}".format(dt_from, dt_to))
+
+    if dt_from > dt_to:
+        parser.error("--from cannot be later than --to")
+        return 1
+    if dt_from.timestamp() < beacon.MIN_EPOCH:
+        parser.error("--from cannot be earlier than NIST Randomness Beacon "
+                     "epoch time {} ({})".format(
+                       beacon.MIN_EPOCH,
+                       datetime.datetime.fromtimestamp(beacon.MIN_EPOCH)))
+        return 1
+
+    char_count = collections.defaultdict(int)
+    beacons = list(
+      beacon.get_beacons(dt_from, dt_to, args.timeout, args.concurrency))
+    for b in beacons:
+        for char in b["outputValue"]:
+            char_count[char] += 1
+    for char in sorted(char_count.keys()):
+        print("{},{}".format(char, char_count[char]))
+    logging.debug("Read {} beacons".format(len(beacons)))
+
+
+if __name__ == "__main__":
+    sys.exit(main())

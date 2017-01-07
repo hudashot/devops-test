@@ -32,7 +32,7 @@ class Beacon(dict):
         try:
             tree = ET.fromstring(xml_string)
             for elem in tree.iter():
-                tag = elem.tag.split("}", 1)[1]  # split namespace
+                tag = elem.tag.split("}", 1)[1]  # strip namespace
                 self[tag] = elem.text
         except ET.ParseError as e:
             raise RuntimeError("Cannot parse '{}' as XML: {}".format(
@@ -42,14 +42,14 @@ class Beacon(dict):
 def get_beacons(dt_from, dt_to, timeout, concurrency):
     """Get Beacon objects for a given time period.
 
-    This function yields Beacon objects (in increasing timestamp order) for all
-    beacons covered by a time period defined by two datetime objects - dt_from
-    and dt_to (inclusive on both sides). Timestamps get truncated to the
-    minute, since beacons are emitted every minute.
+    This function yields Beacon objects for all beacons covered by a time
+    period defined by two datetime objects - dt_from and dt_to (inclusive on
+    both ends). Timestamps get truncated to the minute, since beacons are
+    emitted every minute.
 
     Per-request timeout (in seconds) can be defined via `timeout` argument.
 
-    A HTTP connection pool is used to fetch beacons, with its size defined by
+    An HTTP connection pool is used to fetch beacons, with its size defined by
     the `concurrency` argument.
 
     A RuntimeError is raised if an exception is encountered while fetching or
@@ -87,10 +87,10 @@ def _fetch_urls(urls, timeout, concurrency):
 def _generate_urls(dt_from, dt_to):
     """Generate a list of beacon URLs for a time period.
 
-    This function yields NIST beacon URLs (in increasing order) for all beacons
-    covered by a time period defined by two datetime objects - dt_from and
-    dt_to (inclusive on both sides). Timestamps get truncated to the minute,
-    since beacons are emitted every minute.
+    This function yields NIST beacon URLs (in increasing timestamp order) for
+    all beacons covered by a time period defined by two datetime objects -
+    dt_from and dt_to (inclusive on both sides). Timestamps get truncated to
+    the minute, since beacons are emitted every minute.
     """
     dt_from = _truncate_seconds(dt_from)
     while dt_from <= _truncate_seconds(dt_to):

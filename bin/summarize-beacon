@@ -11,7 +11,7 @@ import beacon
 
 
 def arg_datetime(arg):
-    """Parses a string command-line argument as a datetime object."""
+    """Parse a string command-line argument as a datetime object."""
     dt = dateparser.parse(arg)
     if dt is None:
         raise argparse.ArgumentTypeError(
